@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة القوانين | Alamariyah RP</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-black" oncontextmenu="return false;">
+
+    <nav class="navbar">
+        <div class="nav-oval-container">
+            <ul class="nav-links">
+                <li><a href="index.html">الرئيسية</a></li>
+                <li><a href="rules.html" class="active">القوانين</a></li>
+                <li><a href="https://discord.gg/2yzKrHf7" target="_blank">ديسكورد</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="rules-header">
+        <h1 class="gold-pulse">قوانين ولاية المارية</h1>
+        <p class="crystal-white">نظام الإدارة المتكامل للقوانين</p>
+    </div>
+
+    <div id="rulesGrid" class="rules-main-grid"></div>
+
+    <div id="rulesOverlay" class="rules-overlay" onclick="closeRules()">
+        <div class="rules-rect-box" onclick="event.stopPropagation()">
+            <div class="rules-top-bar">
+                <span class="back-link" onclick="closeRules()">← العودة</span>
+                <h2 id="rulesTitle" class="gold-pulse"></h2>
+            </div>
+            <hr class="gold-divider">
+            <ul id="rulesList" class="rules-list crystal-white"></ul>
+        </div>
+    </div>
+
+    <div class="admin-trigger-container">
+        <button id="adminBtn" onclick="loginAdmin()" class="btn-admin-open">🛠️ دخول لوحة الإدارة</button>
+    </div>
+
+    <section id="adminPanel" class="admin-panel" style="display:none;">
+        <div class="admin-card">
+            <div class="admin-header">
+                <h2 class="gold-pulse">📝 إضافة / تعديل قسم</h2>
+                <button class="btn-close-admin" onclick="hideAdminPanel()">إغلاق اللوحة ×</button>
+            </div>
+            
+            <div class="admin-form">
+                <div class="input-group">
+                    <label>اسم القسم:</label>
+                    <input type="text" id="catTitle" placeholder="مثال: قوانين السطو">
+                </div>
+                <div class="input-group">
+                    <label>محتوى القوانين (كل سطر قانون منفصل):</label>
+                    <textarea id="catRules" rows="8" placeholder="1. يمنع..\n2. يجب.."></textarea>
+                </div>
+                <input type="hidden" id="editId">
+                <button onclick="saveData()" class="btn-save">💾 حفظ البيانات</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // حماية النسخ
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && ['c', 'u', 's', 'i'].includes(e.key)) e.preventDefault();
+            if (e.keyCode == 123) e.preventDefault();
+        });
+
+        let rulesData = JSON.parse(localStorage.getItem('serverRulesData')) || {
+            "main": { title: "القوانين العامة", list: ["احترام الجميع", "يمنع التخريب"] }
+        };
+
+        let isAdmin = false;
+
+        function renderGrid() {
+            const grid = document.getElementById('rulesGrid');
+            grid.innerHTML = '';
+            for (let id in rulesData) {
+                let adminControls = isAdmin ? `
+                    <div class="admin-actions">
+                        <button class="btn-edit" onclick="event.stopPropagation(); editRules('${id}')">تعديل</button>
+                        <button class="btn-delete" onclick="event.stopPropagation(); deleteRules('${id}')">حذف</button>
+                    </div>
+                ` : '';
+
+                grid.innerHTML += `
+                    <div class="rule-box" onclick="openRules('${id}')">
+                        <div class="r-icon">📜</div>
+                        <div class="r-txt">
+                            <h3>${rulesData[id].title}</h3>
+                            ${adminControls}
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function openRules(id) {
+            document.getElementById('rulesTitle').innerText = rulesData[id].title;
+            document.getElementById('rulesList').innerHTML = rulesData[id].list.map(li => `<li>${li}</li>`).join('');
+            document.getElementById('rulesOverlay').style.display = 'flex';
+        }
+
+        function closeRules() { document.getElementById('rulesOverlay').style.display = 'none'; }
+
+        function loginAdmin() {
+            if (isAdmin) { showAdminPanel(); return; }
+            if (prompt("كلمة سر الإدارة:") === "admin123") {
+                isAdmin = true;
+                document.getElementById('adminBtn').innerText = "🛠️ فتح لوحة التحكم";
+                renderGrid();
+                showAdminPanel();
+            }
+        }
+
+        function showAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'block';
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function hideAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'none';
+            resetForm();
+        }
+
+        function saveData() {
+            const title = document.getElementById('catTitle').value;
+            const text = document.getElementById('catRules').value;
+            const editId = document.getElementById('editId').value;
+
+            if (!title || !text) return alert("يرجى تعبئة الحقول");
+
+            const id = editId || title.replace(/\s+/g, '-').toLowerCase();
+            rulesData[id] = { 
+                title: title, 
+                list: text.split('\n').filter(l => l.trim() !== "") 
+            };
+
+            localStorage.setItem('serverRulesData', JSON.stringify(rulesData));
+            renderGrid();
+            hideAdminPanel();
+            alert("تم الحفظ بنجاح");
+        }
+
+        function editRules(id) {
+            document.getElementById('catTitle').value = rulesData[id].title;
+            document.getElementById('catRules').value = rulesData[id].list.join('\n');
+            document.getElementById('editId').value = id;
+            showAdminPanel();
+        }
+
+        function deleteRules(id) {
+            if (confirm("هل أنت متأكد من حذف هذا القسم نهائياً؟")) {
+                delete rulesData[id];
+                localStorage.setItem('serverRulesData', JSON.stringify(rulesData));
+                renderGrid();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('catTitle').value = '';
+            document.getElementById('catRules').value = '';
+            document.getElementById('editId').value = '';
+        }
+
+        renderGrid();
+    </script>
+</body>
+</html>
