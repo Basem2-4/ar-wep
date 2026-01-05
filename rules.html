@@ -4,68 +4,60 @@
     <meta charset="UTF-8">
     <title>إدارة القوانين | Alamariyah RP</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* تنسيقات سريعة لضمان ظهور اللوحة بشكل جيد */
+        .bg-black { background-color: #000; color: white; font-family: sans-serif; }
+        .gold-pulse { color: #d4af37; text-align: center; }
+        .rules-main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 20px; }
+        .rule-box { border: 1px solid #d4af37; padding: 15px; border-radius: 10px; cursor: pointer; background: #111; }
+        .admin-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 20px; border: 2px solid #d4af37; z-index: 1000; width: 90%; max-width: 500px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group input, .input-group textarea { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; }
+        .btn-save { background: #d4af37; color: black; padding: 10px 20px; border: none; cursor: pointer; width: 100%; font-weight: bold; }
+        .rules-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; }
+        .rules-rect-box { background: #111; padding: 30px; border-radius: 15px; border: 1px solid #d4af37; width: 80%; }
+    </style>
 </head>
-<body class="bg-black" oncontextmenu="return false;">
-
-    <nav class="navbar">
-        <div class="nav-oval-container">
-            <ul class="nav-links">
-                <li><a href="index.html">الرئيسية</a></li>
-                <li><a href="rules.html" class="active">القوانين</a></li>
-                <li><a href="https://basem2-4.github.io/ar-store/" class="shop-link gold-pulse" target="_blank">المتجر</a></li>
-                <li><a href="https://discord.gg/2yzKrHf7" target="_blank">ديسكورد</a></li>
-            </ul>
-        </div>
-    </nav>
+<body class="bg-black">
 
     <div class="rules-header">
-        <h1 class="gold-pulse">قوانين مجتمع العمارية أر بي </h1>
-        <p class="crystal-white">نظام الإدارة المتكامل للقوانين</p>
+        <h1 class="gold-pulse">قوانين مجتمع العمارية أر بي</h1>
     </div>
 
     <div id="rulesGrid" class="rules-main-grid"></div>
 
     <div id="rulesOverlay" class="rules-overlay" onclick="closeRules()">
         <div class="rules-rect-box" onclick="event.stopPropagation()">
-            <div class="rules-top-bar">
-                <span class="back-link" onclick="closeRules()">← العودة</span>
-                <h2 id="rulesTitle" class="gold-pulse"></h2>
-            </div>
-            <hr class="gold-divider">
-            <ul id="rulesList" class="rules-list crystal-white"></ul>
+            <h2 id="rulesTitle" class="gold-pulse"></h2>
+            <hr>
+            <ul id="rulesList" style="line-height: 1.8;"></ul>
+            <button onclick="closeRules()" style="margin-top:20px;">إغلاق</button>
         </div>
     </div>
 
-    <div class="admin-trigger-container">
-        <button id="adminBtn" onclick="loginAdmin()" class="btn-admin-open">🛠️ دخول لوحة الإدارة</button>
+    <div style="text-align: center; margin-top: 50px;">
+        <button id="adminBtn" onclick="loginAdmin()" style="padding: 10px; cursor: pointer;">🛠️ لوحة الإدارة</button>
     </div>
 
     <section id="adminPanel" class="admin-panel" style="display:none;">
-        <div class="admin-card">
-            <div class="admin-header">
-                <h2 class="gold-pulse">📝 إضافة / تعديل قسم</h2>
-                <button class="btn-close-admin" onclick="hideAdminPanel()">إغلاق اللوحة ×</button>
-            </div>
-            <div class="admin-form">
-                <div class="input-group">
-                    <label>اسم القسم:</label>
-                    <input type="text" id="catTitle" placeholder="مثال: قوانين السطو">
-                </div>
-                <div class="input-group">
-                    <label>محتوى القوانين (كل سطر قانون منفصل):</label>
-                    <textarea id="catRules" rows="8" placeholder="1. يمنع..\n2. يجب.."></textarea>
-                </div>
-                <input type="hidden" id="editId">
-                <button onclick="saveData()" class="btn-save">💾 حفظ البيانات</button>
-            </div>
+        <h2 class="gold-pulse">📝 إضافة قسم قوانين جديد</h2>
+        <div class="input-group">
+            <label>اسم القسم (مثلاً: قوانين السطو):</label>
+            <input type="text" id="catTitle">
         </div>
+        <div class="input-group">
+            <label>القوانين (ضع كل قانون في سطر جديد):</label>
+            <textarea id="catRules" rows="8"></textarea>
+        </div>
+        <button onclick="saveData()" class="btn-save">💾 حفظ في قاعدة البيانات</button>
+        <button onclick="hideAdminPanel()" style="width:100%; margin-top:10px; background:none; color:white; border:1px solid #444; cursor:pointer;">إلغاء</button>
     </section>
 
     <script>
-        // --- إعدادات الربط بـ MongoDB Data API ---
-        // ملاحظة: استبدل الرابط أدناه برابط الـ Endpoint الذي نسخته من واجهة Data API
-        const MONGODB_API_URL = "https://data.mongodb-api.com/app/data-flwxvzyq/endpoint/data/v1"; 
-        const MONGODB_API_KEY = "0e889823-b64c-4c59-97be-b07a8cded3bf"; // المفتاح الذي أرسلته
+        // --- إعدادات الربط المحدثة ---
+        // استبدل الرابط أدناه برابط الـ URL Endpoint الذي ستحصل عليه من خيار Data API
+        const MONGODB_API_URL = "ضع_رابط_ENDPOINT_هنا"; 
+        const MONGODB_API_KEY = "0e889823-b64c-4c59-97be-b07a8cded3bf"; // المفتاح الذي زودتني به
         
         const DB_CONFIG = {
             dataSource: "Cluster0",
@@ -76,7 +68,7 @@
         let rulesData = {};
         let isAdmin = false;
 
-        // جلب البيانات عند التشغيل
+        // جلب البيانات من MongoDB عند فتح الصفحة
         async function loadRules() {
             try {
                 const response = await fetch(`${MONGODB_API_URL}/action/findOne`, {
@@ -87,11 +79,9 @@
                 const result = await response.json();
                 if (result.document) {
                     rulesData = result.document.data;
-                } else {
-                    rulesData = { "default": { title: "مرحباً بك", list: ["لم يتم إضافة قوانين بعد."] } };
+                    renderGrid();
                 }
-                renderGrid();
-            } catch (e) { console.error("Error loading data", e); }
+            } catch (e) { console.error("خطأ في جلب البيانات", e); }
         }
 
         function renderGrid() {
@@ -100,35 +90,40 @@
             for (let id in rulesData) {
                 grid.innerHTML += `
                     <div class="rule-box" onclick="openRules('${id}')">
-                        <div class="r-icon">📜</div>
-                        <div class="r-txt">
-                            <h3>${rulesData[id].title}</h3>
-                            ${isAdmin ? `<button onclick="event.stopPropagation(); editRules('${id}')">تعديل</button>` : ''}
-                        </div>
+                        <h3>📜 ${rulesData[id].title}</h3>
+                        <p>اضغط لعرض التفاصيل...</p>
                     </div>`;
             }
         }
 
+        // حفظ البيانات الجديدة في MongoDB
         async function saveData() {
             const title = document.getElementById('catTitle').value;
             const text = document.getElementById('catRules').value;
-            if (!title || !text) return alert("اكمل البيانات");
+            if (!title || !text) return alert("يرجى تعبئة جميع الحقول");
 
             const id = title.replace(/\s+/g, '-').toLowerCase();
             rulesData[id] = { title: title, list: text.split('\n') };
 
-            await fetch(`${MONGODB_API_URL}/action/updateOne`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'api-key': MONGODB_API_KEY },
-                body: JSON.stringify({
-                    ...DB_CONFIG,
-                    filter: { "type": "server_rules" },
-                    update: { "$set": { "data": rulesData } },
-                    upsert: true
-                })
-            });
-            alert("تم الحفظ بنجاح!");
-            location.reload();
+            try {
+                const response = await fetch(`${MONGODB_API_URL}/action/updateOne`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'api-key': MONGODB_API_KEY },
+                    body: JSON.stringify({
+                        ...DB_CONFIG,
+                        filter: { "type": "server_rules" },
+                        update: { "$set": { "data": rulesData } },
+                        upsert: true
+                    })
+                });
+                
+                if (response.ok) {
+                    alert("✅ تم الحفظ بنجاح!");
+                    location.reload();
+                } else {
+                    alert("❌ فشل الحفظ. تأكد من عمل Deploy في لوحة التحكم.");
+                }
+            } catch (e) { alert("خطأ في الاتصال بالسيرفر"); }
         }
 
         function openRules(id) {
@@ -140,15 +135,15 @@
         function closeRules() { document.getElementById('rulesOverlay').style.display = 'none'; }
         
         function loginAdmin() {
-            if (prompt("رمز الدخول:") === "admin123") {
+            if (prompt("أدخل رمز الإدارة:") === "admin123") {
                 isAdmin = true;
                 document.getElementById('adminPanel').style.display = 'block';
-                renderGrid();
             }
         }
 
         function hideAdminPanel() { document.getElementById('adminPanel').style.display = 'none'; }
 
+        // تشغيل الجلب التلقائي
         loadRules();
     </script>
 </body>
