@@ -12,6 +12,7 @@
             <ul class="nav-links">
                 <li><a href="index.html">الرئيسية</a></li>
                 <li><a href="rules.html" class="active">القوانين</a></li>
+                <li><a href="https://basem2-4.github.io/ar-store/" class="shop-link gold-pulse" target="_blank">المتجر</a></li>
                 <li><a href="https://discord.gg/2yzKrHf7" target="_blank">ديسكورد</a></li>
             </ul>
         </div>
@@ -62,17 +63,49 @@
     </section>
 
     <script>
+        // --- إعدادات الربط بـ MongoDB Atlas ---
+        const MONGODB_API_URL = "ضع_رابط_الـ_ENDPOINT_هنا"; 
+        const MONGODB_API_KEY = "ضع_مفتاح_الـ_API_هنا";
+        const DB_CONFIG = {
+            dataSource: "Cluster0",
+            database: "AlamariyahDB",
+            collection: "rules"
+        };
+
         // حماية النسخ
         document.addEventListener('keydown', e => {
             if (e.ctrlKey && ['c', 'u', 's', 'i'].includes(e.key)) e.preventDefault();
             if (e.keyCode == 123) e.preventDefault();
         });
 
-        let rulesData = JSON.parse(localStorage.getItem('serverRulesData')) || {
-            "main": { title: "القوانين العامة", list: ["احترام الجميع", "يمنع التخريب"] }
-        };
-
+        let rulesData = {};
         let isAdmin = false;
+
+        // دالة جلب البيانات من MongoDB عند فتح الصفحة لجميع الزوار
+        async function loadRulesFromMongo() {
+            try {
+                const response = await fetch(`${MONGODB_API_URL}/action/findOne`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': MONGODB_API_KEY
+                    },
+                    body: JSON.stringify({
+                        ...DB_CONFIG,
+                        filter: { "type": "server_rules" }
+                    })
+                });
+                const result = await response.json();
+                if (result.document) {
+                    rulesData = result.document.data;
+                } else {
+                    rulesData = { "main": { title: "القوانين العامة", list: ["في انتظار إضافة القوانين..."] } };
+                }
+                renderGrid();
+            } catch (error) {
+                console.error("خطأ في الاتصال بقاعدة البيانات:", error);
+            }
+        }
 
         function renderGrid() {
             const grid = document.getElementById('rulesGrid');
@@ -124,7 +157,8 @@
             resetForm();
         }
 
-        function saveData() {
+        // دالة الحفظ السحابي
+        async function saveData() {
             const title = document.getElementById('catTitle').value;
             const text = document.getElementById('catRules').value;
             const editId = document.getElementById('editId').value;
@@ -137,10 +171,26 @@
                 list: text.split('\n').filter(l => l.trim() !== "") 
             };
 
-            localStorage.setItem('serverRulesData', JSON.stringify(rulesData));
-            renderGrid();
-            hideAdminPanel();
-            alert("تم الحفظ بنجاح");
+            try {
+                await fetch(`${MONGODB_API_URL}/action/updateOne`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': MONGODB_API_KEY
+                    },
+                    body: JSON.stringify({
+                        ...DB_CONFIG,
+                        filter: { "type": "server_rules" },
+                        update: { "$set": { "data": rulesData } },
+                        upsert: true
+                    })
+                });
+                renderGrid();
+                hideAdminPanel();
+                alert("تم الحفظ والمزامنة مع السيرفر بنجاح!");
+            } catch (error) {
+                alert("فشل الحفظ في MongoDB");
+            }
         }
 
         function editRules(id) {
@@ -150,12 +200,26 @@
             showAdminPanel();
         }
 
-        function deleteRules(id) {
+        async function deleteRules(id) {
             if (confirm("هل أنت متأكد من حذف هذا القسم نهائياً؟")) {
                 delete rulesData[id];
-                localStorage.setItem('serverRulesData', JSON.stringify(rulesData));
-                renderGrid();
+                await updateMongoAfterDelete();
             }
+        }
+
+        async function updateMongoAfterDelete() {
+            try {
+                await fetch(`${MONGODB_API_URL}/action/updateOne`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'api-key': MONGODB_API_KEY },
+                    body: JSON.stringify({
+                        ...DB_CONFIG,
+                        filter: { "type": "server_rules" },
+                        update: { "$set": { "data": rulesData } }
+                    })
+                });
+                renderGrid();
+            } catch (e) { alert("فشل الحذف من السحابة"); }
         }
 
         function resetForm() {
@@ -164,8 +228,8 @@
             document.getElementById('editId').value = '';
         }
 
-        renderGrid();
+        // التشغيل الأول لجلب البيانات السحابية
+        loadRulesFromMongo();
     </script>
 </body>
-
 </html>
